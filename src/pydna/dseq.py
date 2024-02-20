@@ -1551,7 +1551,9 @@ class Dseq(_Seq):
                     if cpos == (ln - wpos + enzyme.ovhg + 2) or ln:
                         return (wpos - 1, cpos - 1, enzyme.ovhg)
         return ()
-    def bits(self):
+    
+    def bits(self) -> float:
+        '''Return the number of bits necessary to represent the sequence.'''
         bases_represented= {
             'A':1,
             'T':1,
@@ -1573,6 +1575,7 @@ class Dseq(_Seq):
         for base in self.fill_in().watson:
             bits += _math.log2(bases_represented[base.upper()])
         return bits
+    
 if __name__ == "__main__":
     import os as _os
 
