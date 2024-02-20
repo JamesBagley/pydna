@@ -1551,8 +1551,29 @@ class Dseq(_Seq):
                     if cpos == (ln - wpos + enzyme.ovhg + 2) or ln:
                         return (wpos - 1, cpos - 1, enzyme.ovhg)
         return ()
-
-
+    def bits(self):
+        from math import log2
+        bases_represented= {
+            'A':1,
+            'T':1,
+            'C':1,
+            'G':1,
+            'R':2,
+            'Y':2,
+            'M':2,
+            'K':2,
+            'S':2,
+            'W':2,
+            'H':3,
+            'B':3,
+            'V':3,
+            'D':3,
+            'N':4,
+        }
+        bits = 0
+        for base in self.fill_in().watson:
+            bits += log2(bases_represented[base.upper()])
+        return bits
 if __name__ == "__main__":
     import os as _os
 
