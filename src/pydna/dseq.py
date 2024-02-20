@@ -1552,7 +1552,6 @@ class Dseq(_Seq):
                         return (wpos - 1, cpos - 1, enzyme.ovhg)
         return ()
     def bits(self):
-        from math import log2
         bases_represented= {
             'A':1,
             'T':1,
@@ -1572,7 +1571,7 @@ class Dseq(_Seq):
         }
         bits = 0
         for base in self.fill_in().watson:
-            bits += log2(bases_represented[base.upper()])
+            bits += _math.log2(bases_represented[base.upper()])
         return bits
 if __name__ == "__main__":
     import os as _os
