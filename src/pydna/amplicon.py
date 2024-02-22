@@ -15,7 +15,7 @@ from pydna.tm import program as _program
 from pydna.primer import Primer as _Primer
 from pydna._pretty import pretty_str as _pretty_str
 from pydna.dseqrecord import Dseqrecord as _Dseqrecord
-from Bio.SeqRecord import SeqRecord as _SeqRecord
+from pydna.seqrecord import SeqRecord as _SeqRecord
 import textwrap as _textwrap
 import copy as _copy
 import logging as _logging
@@ -79,11 +79,12 @@ class Amplicon(_Dseqrecord):
         return "Amplicon({})".format(self.__len__())
 
     def reverse_complement(self):
-        answer = type(self)(super().reverse_complement())
-        answer.template = self.template.rc()
-        answer.forward_primer = self.reverse_primer
-        answer.reverse_primer = self.forward_primer
-        return answer
+        r = type(self)(super().reverse_complement())
+        r.template = self.template.rc()
+        r.forward_primer = _copy.copy(self.reverse_primer)
+        r.reverse_primer = _copy.copy(self.forward_primer)
+        r.forward_primer.position, r.reverse_primer.position = r.reverse_primer.position, r.forward_primer.position
+        return r
 
     rc = reverse_complement
 
@@ -108,38 +109,27 @@ class Amplicon(_Dseqrecord):
         figure:string
              A string containing a text representation of the primers
              annealing on the template (see example above).
-
         """
 
-        f = """
-            {sp1}5{faz}{middle1}{raz}3
-             {sp3}{rap}
-            {sp3}3{rp}5
-            5{fp}3
-             {fap:>{fplength}}
-            {sp2}3{fzc}{middle2}{rzc}5
-            """.format(
-            fp=self.forward_primer.seq,
-            fap="|" * len(self.forward_primer.footprint),
-            fplength=len(self.forward_primer.seq),
-            rp=self.reverse_primer.seq[::-1],
-            rap="|" * len(self.reverse_primer.footprint),
-            faz=self.forward_primer.footprint,
-            raz=self.reverse_primer.footprint.reverse_complement(),
-            fzc=self.forward_primer.footprint.complement(),
-            rzc=self.reverse_primer.footprint[::-1],
-            sp1=" " * (len(self.forward_primer.seq) - len(self.forward_primer.footprint)),
-            sp2=" " * (len(self.forward_primer.seq) - len(self.forward_primer.footprint)),
-            sp3=" " * (3 + len(self.forward_primer.seq)),
-            middle1="...",
-            middle2="...",
-        )
-
-        # type_, watson, rcrick = self.template.figure().splitlines()
-        # f2 = (f"{watson}\n"
-
-        #       f"{rcrick}\n")
-        # print(f2)
+        fp = self.forward_primer
+        rp = self.reverse_primer
+        tp = self.template
+        ft = len(fp) - fp._fp  # forward tail length
+        # rt = len(rp) - rp._fp  # reverse tail length
+        faz = tp[fp.position - fp._fp : fp.position].seq
+        raz = tp[rp.position : rp.position + rp._fp].seq
+        sp3 = " " * (len(fp.seq) + 3)
+        fzc = tp.seq.rc()[::-1][fp.position - fp._fp : fp.position]
+        rzc = tp.seq.rc()[::-1][rp.position : rp.position + rp._fp]
+        f = f"""
+            {" " *ft}5{faz}...{raz}3
+             {sp3}{"|" * rp._fp}
+            {sp3}3{rp.seq[::-1]}5
+            5{fp.seq}3
+             {"|" *fp._fp:>{len(fp)}}
+            {" " *ft}3{fzc}...{rzc}5
+            """
+        # breakpoint()
         return _pretty_str(_textwrap.dedent(f).strip("\n"))
 
     def set_forward_primer_footprint(self, length):

@@ -50,8 +50,10 @@ class SeqRecord(_SeqRecord):
     nicer output in the IPython shell.
     """
 
-    def __init__(self, *args, id="id", name="name", description="description", **kwargs):
-        super().__init__(*args, id=id, name=name, description=description, **kwargs)
+    def __init__(self, seq, *args, id="id", name="name", description="description", **kwargs):
+        if isinstance(seq, str):
+            seq = _Seq(seq)
+        super().__init__(seq, *args, id=id, name=name, description=description, **kwargs)
         self._fix_attributes()
 
     def _fix_attributes(self):
@@ -123,6 +125,8 @@ class SeqRecord(_SeqRecord):
         answer = super().reverse_complement(*args, **kwargs)
         answer = type(self).from_Bio_SeqRecord(answer)
         return answer
+
+    rc = reverse_complement
 
     def isorf(self, table=1):
         """Detect if sequence is an open reading frame (orf) in the 5'-3'.
@@ -323,7 +327,7 @@ class SeqRecord(_SeqRecord):
                 [
                     i,
                     lbl[:16],
-                    {1: "-->", -1: "<--", 0: "---", None: "---"}[sf.strand],
+                    {1: "-->", -1: "<--", 0: "---", None: "---"}[sf.location.strand],
                     sf.location.start,
                     sf.location.end,
                     len(sf),
@@ -381,7 +385,7 @@ class SeqRecord(_SeqRecord):
         """
         return sorted(self.features, key=lambda x: x.location.start)
 
-    def useguid(self):
+    def seguid(self):
         """Return the url safe SEGUID [#]_ for the sequence.
 
         This checksum is the same as seguid but with base64.urlsafe
@@ -392,15 +396,15 @@ class SeqRecord(_SeqRecord):
         Examples
         --------
         >>> from pydna.seqrecord import SeqRecord
-        >>> a=SeqRecord("aaaaaaa")
-        >>> a.useguid() # original seguid is +bKGnebMkia5kNg/gF7IORXMnIU
-        '-bKGnebMkia5kNg_gF7IORXMnIU'
+        >>> a=SeqRecord("gattaca")
+        >>> a.seguid() # original seguid is +bKGnebMkia5kNg/gF7IORXMnIU
+        'lsseguid-tp2jzeCM2e3W4yxtrrx09CMKa_8'
 
         References
         ----------
         .. [#] http://wiki.christophchamp.com/index.php/SEGUID
         """
-        return self.seq.useguid()
+        return self.seq.seguid()
 
     def comment(self, newcomment=""):
         """docstring."""
@@ -414,8 +418,8 @@ class SeqRecord(_SeqRecord):
         """docstring."""
         return datetime.datetime.now().replace(microsecond=0).isoformat()
 
-    def stamp(self, algorithm, now=datefunction, tool="pydna", separator=" ", comment=""):
-        """Add a uSEGUID or cSEGUID checksum.
+    def stamp(self, now=datefunction, tool="pydna", separator=" ", comment=""):
+        """Add seguid checksum to COMMENTS sections
 
         The checksum is stored in object.annotations["comment"].
         This shows in the COMMENTS section of a formatted genbank file.
@@ -437,43 +441,22 @@ class SeqRecord(_SeqRecord):
         --------
         >>> from pydna.seqrecord import SeqRecord
         >>> a = SeqRecord("aa")
-        >>> a.stamp("uSEGUID")
-        'gBw0Jp907Tg_yX3jNgS4qQWttjU'
+        >>> a.stamp()
+        'lsseguid-gBw0Jp907Tg_yX3jNgS4qQWttjU'
         >>> a.annotations["comment"][:41]
-        'pydna uSEGUID gBw0Jp907Tg_yX3jNgS4qQWttjU'
+        'pydna lsseguid-gBw0Jp907Tg_yX3jNgS4qQWttj'
         """
+        chksum = self.seq.seguid()
         oldcomment = self.annotations.get("comment", "")
-
-        algorithm = _re.sub("seguid", "SEGUID", algorithm, flags=_re.IGNORECASE)
-
-        chksum = getattr(self.seq, algorithm.lower())()
-
-        pattern = (
-            r"(?i)(?P<algorithm>(c|l|u)?SEGUID)"
-            r"(?:_|\s|:){1,5}(?P<sha1>\S{27})"
-            r"(?P<iso>(?:\s([1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-"
-            r"(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9])"
-            r":([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[01][0-9]):"
-            r"[0-5][0-9])?)?"
-        )
-
-        oldstamp = _re.search(pattern, oldcomment)
-
-        if oldstamp:
-            old_stamp = oldstamp.group(0)
-            old_algorithm = oldstamp.group("algorithm")
-            old_chksum = oldstamp.group("sha1")
-            # old_iso = oldstamp.group("iso")
-            if chksum == old_chksum and algorithm == old_algorithm:
-                return _pretty_str(oldstamp.group(0))
-            else:
-                _warn(
-                    f"Stamp change.\nNew: {algorithm} {chksum}\nOld: {old_stamp}",
-                    _PydnaWarning,
-                )
-
-        # now = datetime.datetime.now().replace(microsecond=0).isoformat()
-        self.annotations["comment"] = (f"{oldcomment}\n" f"{tool} {algorithm} {chksum} {now()} {comment}").strip()
+        oldstamp = _re.findall(r"..seguid-\S{27}", oldcomment)
+        if oldstamp and oldstamp[0] == chksum:
+            return _pretty_str(oldstamp[0])
+        elif oldstamp:
+            _warn(
+                f"Stamp change.\nNew: {chksum}\nOld: {oldstamp[0]}",
+                _PydnaWarning,
+            )
+        self.annotations["comment"] = (f"{oldcomment}\n" f"{tool} {chksum} {now()} {comment}").strip()
         return _pretty_str(chksum)
 
     def lcs(self, other, *args, limit=25, **kwargs):
@@ -615,6 +598,21 @@ class SeqRecord(_SeqRecord):
 
     def __format__(self, format):
         """docstring."""
+
+        def removeprefix(text, prefix):
+            """Until Python 3.8 is dropped, then use str.removeprefix."""
+            if text.startswith(prefix):
+                return text[len(prefix) :]
+            return text
+
+        if format == "pydnafasta":
+            return _pretty_str(
+                f">{self.id} {len(self)} bp {dict(((True,'circular'),(False,'linear')))[self.seq.circular]}\n{str(self.seq)}\n"
+            )
+        if format == "primer":
+            return _pretty_str(
+                f">{self.id} {len(self)}-mer{removeprefix(self.description, self.name).strip()}\n{str(self.seq)}\n"
+            )
         return _pretty_str(super().__format__(format))
 
     def __add__(self, other):

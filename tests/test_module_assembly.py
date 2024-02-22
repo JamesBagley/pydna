@@ -158,7 +158,9 @@ def test_new_assembly(monkeypatch):
     ]
     c1 = assembly.Assembly((a, b, c), limit=14)
     result = c1.assemble_circular()[0]
-    assert result.cseguid() == "t3mIjxv3Q5GK9SWpXD-UfyefANc"
+
+    assert result.seguid() == "cdseguid-qj3q-0rsUxj8xLIxKuhVEIQ8kIw"
+
     assert str(result.seq) == "acgatgctatactggCCCCCtgtgctgtgctctaTTTTTtattctggctgtatctGGGGGT"
     # acgatgctatactggCCCCCtgtgctgtgctctaGG
     feature_seqs = (
@@ -188,10 +190,10 @@ def test_new_assembly(monkeypatch):
 
     c2 = assembly.Assembly((a, b, b2, c), limit=14)
     circprods = c2.assemble_circular()
-    assert circprods[0].cseguid() == "t3mIjxv3Q5GK9SWpXD-UfyefANc"
-    assert circprods[1].cseguid() == "t3mIjxv3Q5GK9SWpXD-UfyefANc"
-    assert circprods[2].cseguid() == "k9ztaDj9HsQYZvxzvkUWn6SY5Ks"
-    assert circprods[3].cseguid() == "k9ztaDj9HsQYZvxzvkUWn6SY5Ks"
+    assert circprods[0].seguid() == "cdseguid-qj3q-0rsUxj8xLIxKuhVEIQ8kIw"
+    assert circprods[1].seguid() == "cdseguid-qj3q-0rsUxj8xLIxKuhVEIQ8kIw"
+    assert circprods[2].seguid() == "cdseguid-qCuwUw63xkh58WM-ADaT7uX_-oQ"
+    assert circprods[3].seguid() == "cdseguid-qCuwUw63xkh58WM-ADaT7uX_-oQ"
     assert str(circprods[0].seq) == "acgatgctatactggCCCCCtgtgctgtgctctaTTTTTtattctggctgtatctGGGGGT"
     assert str(circprods[2].seq) == "acgatgctatactggCCCCCtgtgctgtgctctaCCtattctggctgtatctGGGGGT"
 
@@ -383,15 +385,16 @@ algorithm..: common_sub_strings"""
     # text4
     x, y = parse(text4)
     a = assembly.Assembly((x, y), limit=557)
-    assert a.assemble_linear()[0].lseguid() == "EC5pU87OEIjuNpG7jiARzFwLabc"
+
+    assert a.assemble_linear()[0].seguid() == "ldseguid-4p-1ecqJRcsQrJogHIX1Axux75I"
     a = assembly.Assembly((y, x), limit=557)
-    assert a.assemble_linear()[0].lseguid() == "EC5pU87OEIjuNpG7jiARzFwLabc"
+    assert a.assemble_linear()[0].seguid() == "ldseguid-4p-1ecqJRcsQrJogHIX1Axux75I"
     a = assembly.Assembly((x.rc(), y), limit=557)
-    assert a.assemble_linear()[0].lseguid() == "EC5pU87OEIjuNpG7jiARzFwLabc"
+    assert a.assemble_linear()[0].seguid() == "ldseguid-4p-1ecqJRcsQrJogHIX1Axux75I"
     a = assembly.Assembly((x, y.rc()), limit=557)
-    assert a.assemble_linear()[0].lseguid() == "EC5pU87OEIjuNpG7jiARzFwLabc"
+    assert a.assemble_linear()[0].seguid() == "ldseguid-4p-1ecqJRcsQrJogHIX1Axux75I"
     a = assembly.Assembly((x.rc(), y.rc()), limit=557)
-    assert a.assemble_linear()[0].lseguid() == "EC5pU87OEIjuNpG7jiARzFwLabc"
+    assert a.assemble_linear()[0].seguid() == "ldseguid-4p-1ecqJRcsQrJogHIX1Axux75I"
 
     candidate = a.assemble_linear()[0]
     correct = "tcctgacgggtaattttgatttgcatgccgtccgggtgagtcatagcgtctggttgttttgccagattcagcagagtctgtgcaatgcggccgctgaccacatacgatttaggtgacactatagaacgcggccgccagctgaagcttcgtacgctgcaggtcgacggatccccgggttaattaaggcgcgccagatctgtttagcttgccttgtccccgccgggtcacccggccagcgacatggaggcccagaataccctccttgacagtcttgacgtgcgcagctcaggggcatgatgtgactgtcgcccgtacatttagcccatacatccccatgtataatcatttgcatccatacattttgatggccgcacggcgcgaagcaaaaattacggctcctcgctgcagacctgcgagcagggaaacgctcccctcacagacgcgttgaattgtccccacgccgcgcccctgtagagaaatataaaaggttaggatttgccactgaggttcttctttcatatacttccttttaaaatcttgctaggatacagttctcacatcacatccgaacataaacaaccgtcgaggaacgccaggttgcccactttctcactagtgacctgcagccgacccaatcacatcacatccgaacataaacaaccatgggtaaaaagcctgaactcaccgcgacgtctgtcgagaagtttctgatcgaaaagttcgacagcgtctccgacctgatgcagctctcggagggcgaagaatctcgtgctttcagcttcgatgtaggagggcgtggatatgtcctgcgggtaaatagctgcgccgatggtttctacaaagatcgttatgtttatcggcactttgcatcggccgcgctcccgattccggaagtgcttgacattggggaattcagcgagagcctgacctattgcatctcccgccgtgcacagggtgtcacgttgcaagacctgcctgaaaccgaactgcccgctgttctgcagccggtcgcggaggccatggatgcgatcgctgcggccgatcttagccagacgagcgggttcggcccattcggaccgcaaggaatcggtcaatacactacatggcgtgatttcatatgcgcgattgctgatccccatgtgtatcactggcaaactgtgatggacgacaccgtcagtgcgtccgtcgcgcaggctctcgatgagctgatgctttgggccgaggactgccccgaagtccggcacctcgtgcacgcggatttcggctccaacaatgtcctgacggacaatggccgcataacagcggtcattgactggagcgaggcgatgttcggggattcccaatacgaggtcgccaacatcttcttctggaggccgtggttggcttgtatggagcagcagacgcgctacttcgagcggaggcatccggagcttgcaggatcgccgcggctccgggcgtatatgctccgcattggtcttgaccaactctatcagagcttggttgacggcaatttcgatgatgcagcttgggcgcagggtcgatgcgacgcaatcgtccgatccggagccgggactgtcgggcgtacacaaatcgcccgcagaagcgcggccgtctggaccgatggctgtgtagaagtactcgccgatagtggaaaccgacgccccagcactcgtccgagggcaaaggaataatcagtactgacaataaaaagattcttgtagggataacagggtaatcggagtgccatctgtgcagacaaacgcatcaggatagagtcttttgtaacgaccccgtctccaccaacttggtatgcttgaaatctcaaggccattacacattcagttatgtgaacgaaaggtctttatttaacgtagcataaactaaataatacaggttccggttagcctgcaatgtgttaaatctaaaggagcatacccaaaatgaactgaagacaaggaaatttgcttgtccagatgtgattgagcatttgaacgttaataacataacatttttatacttaactatagaaagacttgtataaaaactggcaaacgagatattctgaatattggtgcatatttcaggtagaaaagcttacaaaacaatctaatcataatattgagatgaagagaaagataaaagaaaaaacgataagtcagatgagattatgattgtactttgaaatcgaggaacaaagtatatacggtagtagttccccgagttataacgggagatcatgtaaattgagaaaccagataaagatttggtatgcactctagcaagaaaataaaatgatgaatctatgatatagatcacttttgttccagcgtcgaggaacgccaggttgcccactttctcactagtgacctgcagccgacgatcagatctttcaggaaagtttcggaggagatagtgttcggcagtttgtacatcatctgcgggatcaggtacggtttgatcaggttgtagaagatcaggtaagacatagaatcgatgtagatgatcggtttgtttttgttgatttttacgtaacagttcagttggaatttgttacgcagacccttaaccaggtattctacttcttcgaaagtgaaagactgggtgttcagtacgatcgatttgttggtagagtttttgttgtaatcccatttaccaccatcatccatgaaccagtatgccagagacatcggggtcaggtagttttcaaccaggttgttcgggatggtttttttgttgttaacgatgaacaggttagccagtttgttgaaagcttggtgtttgaaagtctgggcgccccaggtgattaccaggttacccaggtggttaacacgttcttttttgtgcggcggggacagtacccactgatcgtacagcagacatacgtggtccatgtatgctttgtttttccactcgaactgcatacagtaggttttaccttcatcacgagaacggatgtaagcatcacccaggatcagaccgatacctgcttcgaactgttcgatgttcagttcgatcagctgggatttgtattctttcagcagtttagagttcggacccaggttcattacctggttttttttgatgtttttcatatgcatggatccggggttttttctccttgacgttaaagtatagaggtatattaacaattttttgttgatacttttattacatttgaataagaagtaatacaaaccgaaaatgttgaaagtattagttaaagtggttatgcagtttttgcatttatatatctgttaatagatcaaaaatcatcgcttcgctgattaattaccccagaaataaggctaaaaaactaatcgcattatcatcctatggttgttaatttgattcgttcatttgaaggtttgtggggccaggttactgccaatttttcctcttcataaccataaaagctagtattgtagaatctttattgttcggagcagtgcggcgcgaggcacatctgcgtttcaggaacgcgaccggtgaagacgaggacgcacggaggagagtcttccttcggagggctgtcacccgctcggcggcttctaatccgtacttcaatatagcaatgagcagttaagcgtattactgaaagttccaaagagaaggtttttttaggctaagataatggggctctttacatttccacaacatataagtaagattagatatggatatgtatatggatatgtatatggtggtaatgccatgtaatatgattattaaacttctttgcgtccatccaacgagatctggcgcgccttaattaacccaacctgcattaatgaatcggccaacgcgcggattaccctgttatccctacatattgttgtgccatctgtgcagacaaacgcatcaggattcagtactgacaataaaaagattcttgttttcaagaacttgtcatttgtatagtttttttatattgtagttgttctattttaatcaaatgttagcgtgatttatattttttttcgcctcgacatcatctgcccagatgcgaagttaagtgcgcagaaagtaatatcatgcgtcaatcgtatgtgaatgctggtcgctatactgctgtcgattcgatactaacgccgccatccagtgtcgaaaacgagctcgaattcatcgatgatatcagatccactagtggcctatgcggccgcggatctgccggtctccctatagtgagtcgatccggatttacctgaatcaattggcgaaattttttgtacgaaatttcagccacttcacag"
@@ -475,7 +478,8 @@ algorithm..: common_sub_strings"""
     list_of_formatted_seq_records = parse(text8)
     a = assembly.Assembly(list_of_formatted_seq_records, limit=28)
     candidate = a.assemble_circular()[0]
-    assert candidate.cseguid() == "wM7nM6oJer3bB6RV81IH78e02j4"
+
+    assert candidate.seguid() == "cdseguid-shtCglCTM_qST6oYZ7_iz80jZ6s"
 
 
 def test_MXblaster1(monkeypatch):
@@ -540,7 +544,7 @@ def test_MXblaster1(monkeypatch):
 
     a = assembly.Assembly((pCAPs_pSU0_E_Z, A_AgTEFp_b, B_hph_c, C_KlLEU2tt_d), limit=28)
     candidate = a.assemble_circular()[0]
-    assert candidate.cseguid() == "wM7nM6oJer3bB6RV81IH78e02j4"
+    assert candidate.seguid() == "cdseguid-shtCglCTM_qST6oYZ7_iz80jZ6s"
     assert len(candidate) == 7911
     YPK0_AgTEFp_hph_KlLEU2tt = candidate
 
@@ -554,7 +558,7 @@ def test_MXblaster1(monkeypatch):
 
     a = assembly.Assembly((pCAPs_pSU0_E_Z, A_KlLEU2tt_b, B_gal1_ISceI_c, C_AgTEFt_d), limit=25)
     candidate = a.assemble_circular()[0]
-    assert candidate.cseguid() == "ZHJqzSnqRxJsdKN5Pu5KP6coR6o"
+    assert candidate.seguid() == "cdseguid-SBr-IeJRj68Wyjq1yth3Y35pH_c"
     assert len(candidate) == 8099
     YPK0_KlLEU2tt_gal1_ISceI_AgTEFt = candidate
 
@@ -574,12 +578,12 @@ def test_MXblaster1(monkeypatch):
     a = assembly.Assembly((AgTEFp_hph_KlLEU2tt_2, KlLEU2tt_gal1_ISceI_AgTEFt_2, pCAPs_pSU0_E_Z), limit=61)
     candidate = a.assemble_circular()[0]
     assert len(candidate) == 9772
-    assert candidate.cseguid() == "QnsJ7ATZXSy2QuN4hy51SZw_aU0"
+    assert candidate.seguid() == "cdseguid-CF4kR78Kt_gRWaVRagRqI0dotyE"
     pCAPs_MX4blaster1 = candidate
 
     pCAPs_MX4blaster1 = pCAPs_MX4blaster1.synced("tcgcgcgtttcggtgatgacggtgaaaacc")
 
-    assert pCAPs_MX4blaster1.useguid() == "X9WqaNk2lw6FbZlJr995MaDfn-M"
+    assert pCAPs_MX4blaster1.seguid() == "cdseguid-CF4kR78Kt_gRWaVRagRqI0dotyE"
 
     from Bio.Restriction import AjiI, AgeI
 
@@ -595,19 +599,19 @@ def test_MXblaster1(monkeypatch):
 
     GAL_GIN = pcr(primer[592], primer[593], GAL10prom + GIN11M86)
 
-    assert GAL_GIN.useguid() == "7Lkfw8dsz9_kkBU3XXnz4KAON3A"
+    assert GAL_GIN.seguid() == "ldseguid-dJ_VblJ0kbzEJpEy1RmzQsa9Z1w"
 
-    assert pCAPs.useguid() == "-XHU8OxITyHGTl9XtMrJ4NvEv3o"
+    assert pCAPs.seguid() == "cdseguid-Z8mrStkBQUOs3VcINmizy1WfzNM"
 
     pCAPs_GAL_GIN = (pCAPs.cut(AjiI)[0] + GAL_GIN).looped()
 
-    assert pCAPs_GAL_GIN.useguid() == "T1eWCPIXPlq2HriSfpFSNnGwmd4"
+    assert pCAPs_GAL_GIN.seguid() == "cdseguid-c_9naB_WFu9MAknrtwG55Ux_KUM"
 
     GAL_GIN2 = pcr(primer[592], primer[467], pCAPs_GAL_GIN)
 
-    assert GAL_GIN2.useguid() == "zdIU4vjdfOxLkTTnKzIxhphnewg"
+    assert GAL_GIN2.seguid() == "ldseguid-onGqkKmNR25g94SUElmhUPMOCXE"
 
-    assert pCAPs_MX4blaster1.useguid() == "X9WqaNk2lw6FbZlJr995MaDfn-M"  # 9772bp__a
+    assert pCAPs_MX4blaster1.seguid() == "cdseguid-CF4kR78Kt_gRWaVRagRqI0dotyE"  # 9772bp__a
 
     pCAPs_MX4blaster1_AgeI = pCAPs_MX4blaster1.cut(AgeI)[0]
 
@@ -620,7 +624,7 @@ def test_MXblaster1(monkeypatch):
     candidate = candidates[1]
     assert len(candidate) == 10566
 
-    assert candidate.cseguid() == "LK6idufxMXFHL5shXakwO3lciMU"
+    assert candidate.seguid() == "cdseguid-Bhuxi6G1Zo6v2ub34XrTsG7VHjA"
 
     pCAPs_MX4blaster2 = candidate
 
@@ -630,9 +634,9 @@ def test_MXblaster1(monkeypatch):
     pCAPs_MX4blaster2_old = read("pMX4blaster2_old.gb")
 
     assert len(pCAPs_MX4blaster2_old) == 10566
-    assert pCAPs_MX4blaster2_old.useguid() == "7B4KKAeM2x8npjkp5U942rtMbB8"
+    assert pCAPs_MX4blaster2_old.seguid() == "cdseguid-Bhuxi6G1Zo6v2ub34XrTsG7VHjA"
     assert eq(pCAPs_MX4blaster2, pCAPs_MX4blaster2_old)
-    assert pCAPs_MX4blaster2.useguid() == "7B4KKAeM2x8npjkp5U942rtMbB8"
+    assert pCAPs_MX4blaster2.seguid() == "cdseguid-Bhuxi6G1Zo6v2ub34XrTsG7VHjA"
 
 
 def test_assemble_pGUP1(monkeypatch):
@@ -668,8 +672,8 @@ def test_assemble_pGUP1(monkeypatch):
     assert len(pGUP1_correct) == 9981
     assert len(pGUP1) == 9981
     assert eq(pGUP1, pGUP1_correct)
-    assert pGUP1_correct.useguid() == "42wIByERn2kSe_Exn405RYwhffU"
-    assert pGUP1.useguid() == "42wIByERn2kSe_Exn405RYwhffU"
+    assert pGUP1_correct.seguid() == "cdseguid-5aiMDLWXOfvl0PBCQV-96q9UKqY"
+    assert pGUP1.seguid() == "cdseguid-5aiMDLWXOfvl0PBCQV-96q9UKqY"
 
 
 # def test_35_36(monkeypatch):
@@ -696,7 +700,7 @@ def test_pYPK7_TDH3_GAL2_PGI1(monkeypatch):
 
     z = Assembly((pYPKp7_AatII, pMEC1142), limit=300)
 
-    assert z.assemble_circular()[1].cseguid() == "eDYovOVEKFIbc7REPlTsnScycQY"
+    assert z.assemble_circular()[1].seguid() == "cdseguid-N2gMOgsUuGgBKnikyuy-dXNDztM"
 
 
 def test_marker_replacement_on_plasmid(monkeypatch):
@@ -745,19 +749,19 @@ def test_linear_with_annotations2(monkeypatch):
     from pydna.dseqrecord import Dseqrecord
 
     a = Dseqrecord("acgatgctatactgtgCCNCCtgtgctgtgctcta")
-    a.add_feature(0, 10, label='a_feat')
+    a.add_feature(0, 10, label="a_feat")
     a_feat_seq = a.features[0].extract(a)
     # 12345678901234
     b = Dseqrecord("tgtgctgtgctctaTTTTTTTtattctggctgtatcCCCCCC")
-    b.add_feature(0, 10, label='b_feat')
+    b.add_feature(0, 10, label="b_feat")
     b_feat_seq = b.features[0].extract(b)
 
     # 123456789012345
     c = Dseqrecord("GtattctggctgtatcGGGGGtacgatgctatactgtg")
-    c.add_feature(0, 10, label='c_feat')
+    c.add_feature(0, 10, label="c_feat")
     c_feat_seq = c.features[0].extract(c)
 
-    feature_sequences = {'a_feat': a_feat_seq, 'b_feat': b_feat_seq, 'c_feat': c_feat_seq}
+    feature_sequences = {"a_feat": a_feat_seq, "b_feat": b_feat_seq, "c_feat": c_feat_seq}
 
     a.name = "aaa"  # 1234567890123456
     b.name = "bbb"
@@ -766,19 +770,19 @@ def test_linear_with_annotations2(monkeypatch):
     x = asm.assemble_linear()[0]
     # print(x.features)
     # print(x)
-    answer = 'aaa|14\n    \\/\n    /\\\n    14|bbb|15\n           \\/\n           /\\\n           15|ccc'
+    answer = "aaa|14\n    \\/\n    /\\\n    14|bbb|15\n           \\/\n           /\\\n           15|ccc"
 
     assert x.figure() == answer.strip()
-    answer = 'acgatgctatactgtgCCNCCtgtgctgtgctcta\n                     TGTGCTGTGCTCTA\n                     tgtgctgtgctctaTTTTTTTtattctggctgtatc\n                                          TATTCTGGCTGTATC\n                                          tattctggctgtatcGGGGGtacgatgctatactgtg\n'
+    answer = "acgatgctatactgtgCCNCCtgtgctgtgctcta\n                     TGTGCTGTGCTCTA\n                     tgtgctgtgctctaTTTTTTTtattctggctgtatc\n                                          TATTCTGGCTGTATC\n                                          tattctggctgtatcGGGGGtacgatgctatactgtg\n"
     assert x.detailed_figure()
     for feat in x.features:
         try:
-            assert feat.extract(x).seq == feature_sequences[feat.qualifiers['label']].seq
+            assert feat.extract(x).seq == feature_sequences[feat.qualifiers["label"]].seq
         except AssertionError:
-            print(feat.qualifiers['label'])
-            print(feat.extract(x).seq, 'extracted feat')
-            print(feature_sequences[feat.qualifiers['label']].seq, 'original feat')
-            assert feat.extract(x).seq == feature_sequences[feat.qualifiers['label']].seq
+            print(feat.qualifiers["label"])
+            print(feat.extract(x).seq, "extracted feat")
+            print(feature_sequences[feat.qualifiers["label"]].seq, "original feat")
+            assert feat.extract(x).seq == feature_sequences[feat.qualifiers["label"]].seq
 
 
 # acgatgctatactgtgCCNCCtgtgctgtgctcta
@@ -789,5 +793,5 @@ def test_linear_with_annotations2(monkeypatch):
 
 
 if __name__ == "__main__":
-    # pytest.main([__file__, "-x", "-vv", "-s"])
-    pytest.main([__file__, "-x", "-vv", "-s", "--profile"])
+    pytest.main([__file__, "-x", "-vv", "-s"])
+    # pytest.main([__file__, "-x", "-vvv", "-s", "--profile"])

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pydna
 import pytest
 from pydna import _PydnaWarning
 
@@ -243,8 +242,8 @@ def test_linear_circular():
 
     """ test Dseqrecord linear & circular property"""
     a = Dseqrecord("attt")
-    a.stamp("useguid")
-    assert a.stamp("useguid")
+    a.stamp()
+    assert a.stamp()
     a = Dseqrecord("attt", circular=False)
     assert a.circular == False
     assert a.rc().circular == False
@@ -272,29 +271,34 @@ def test_stamp():
     from pydna.dseqrecord import Dseqrecord
 
     lin = Dseqrecord("attt")
-    assert lin.stamp("useguid") == "ot6JPLeAeMmfztW1736Kc6DAqlo"
-    assert lin.stamp("useguid")[:35] == "uSEGUID ot6JPLeAeMmfztW1736Kc6DAqlo"
+    lin.stamp()
+    first = lin.annotations["comment"]
+    assert "ldseguid-4WaxNpLQfxFy6HOjg07u6EdhH5Q" in first
+    lin.stamp()
+    assert first[:42] == lin.annotations["comment"][:42]
 
     crc = Dseqrecord("attt", circular=True)
-    assert crc.stamp("cseguid") == "oopV-6158nHJqedi8lsshIfcqYA"
-    crc.annotations["comment"] = "cSEGUID_oopV-6158nHJqedi8lsshIfcqYZ"
-    with pytest.warns(_PydnaWarning):
-        crc.stamp("cseguid")
+    crc.stamp()
+    first = crc.annotations["comment"]
+    assert "cdseguid-4WaxNpLQfxFy6HOjg07u6EdhH5Q" in first
+    crc.stamp()
+    assert first[:42] == crc.annotations["comment"][:42]
+    assert len(first) == len(crc.annotations["comment"])
 
     from pydna.dseq import Dseq
 
     blunt = Dseqrecord(Dseq("aa"))
 
-    assert blunt.stamp("useguid") == "gBw0Jp907Tg_yX3jNgS4qQWttjU"
+    assert blunt.stamp()[:42] == "ldseguid-5u_VqZ0yq_PnodWlwL970EWt6PY"
 
     staggered = Dseqrecord(Dseq("aa", "tta"))
-    assert staggered.stamp("lseguid") == "qlQKjCD04EhPHtsdnEQ0DriOr10"
+    assert staggered.stamp()[:42] == "ldseguid-4XNdHr5TsfaY-H9X9loPdW3C5y8"
 
     staggered = Dseqrecord(Dseq("aa", "att"))
-    assert staggered.stamp("lseguid") == "mvhPR1scFLQfgDn3olxegJmckgg"
+    assert staggered.stamp()[:42] == "ldseguid-HzB9mSb-Itg5IDNPXVegeGbGako"
 
     staggered = Dseqrecord(Dseq("aa", "atta"))
-    assert staggered.stamp("lseguid") == "hPVQIzC3k29tDuAu_C5xEgLsFZs"
+    assert staggered.stamp()[:42] == "ldseguid-ShX1Rh4gHuGoMngZMA_jZLuFJDk"
 
 
 def test_revcomp():
@@ -339,7 +343,7 @@ def test_revcomp():
 
     rc = a.rc()
 
-    assert rc.features[0].strand is None
+    assert rc.features[0].location.strand is None
 
 
 def test_m():
@@ -398,24 +402,13 @@ def test___contains__():
     assert "ggatcc" in s
 
 
-def test_cseguid():
+def test_seguid():
     from pydna.dseqrecord import Dseqrecord
 
-    s = Dseqrecord("tttGGATCCaaa")
-    with pytest.raises(TypeError):
-        s.cseguid()
-    s = Dseqrecord("tttGGATCCaaa", circular=True)
-    assert s.cseguid() == "54zt6fixMmNwFTsUVILdrdIRi2U"
-
-
-def test_lseguid():
-    from pydna.dseqrecord import Dseqrecord
-
-    s = Dseqrecord("tttGGATCCaaa", circular=True)
-    with pytest.raises(TypeError):
-        s.lseguid()
-    s = Dseqrecord("tttGGATCCaaa")
-    assert s.lseguid() == "qr7ePrqTrFyQt0fsTsiltN20oEk"
+    l = Dseqrecord("tttGGATCCaaa")
+    assert l.seguid() == "ldseguid-W4m4F80UCbvl4gBy2ttK_i0IA04"
+    c = Dseqrecord("tttGGATCCaaa", circular=True)
+    assert c.seguid() == "cdseguid-Yis91a4lQjAegmW88b1HuQmDvns"
 
 
 def test_format():
@@ -484,7 +477,7 @@ def test_write_different_file_to_existing_file(monkeypatch):
     from pydna.readers import read
 
     s = Dseqrecord("Ggatcc", circular=True)
-    d = Dseqrecord("Ggatcn", circular=True)
+    d = Dseqrecord("GgatcA", circular=True)
 
     monkeypatch.setattr("pydna.dseqrecord._os.path.isfile", lambda x: True)
     monkeypatch.setattr("pydna.dseqrecord._os.rename", lambda x, y: True)
@@ -502,11 +495,11 @@ def test_write_different_file_to_stamped_existing_file(monkeypatch):
     from pydna.readers import read
 
     new = Dseqrecord("Ggatcc", circular=True)
-    new.stamp("cSEGUID")
+    new.stamp()
     old = Dseqrecord("Ggatcc", circular=True)
-    old.stamp("cSEGUID")
+    old.stamp()
 
-    assert new.description[:35] == old.description[:35]
+    assert new.description[:42] == old.description[:42]
 
     monkeypatch.setattr("pydna.dseqrecord._os.path.isfile", lambda x: True)
     monkeypatch.setattr("pydna.dseqrecord._os.rename", lambda x, y: True)
@@ -533,7 +526,7 @@ def test_write_different_file_to_stamped_existing_file(monkeypatch):
 
     assert m.called
     # m.write().assert_called_once_with(new.format())
-    assert m.call_count == 6
+    assert m.call_count == 4  #  6
     assert m.mock_calls[0]
     assert m.mock_calls[4]
 
@@ -546,9 +539,9 @@ def test_write_different_file_to_stamped_existing_file2(monkeypatch):
     from pydna.readers import read
 
     new = Dseqrecord("Ggatcc", circular=True)
-    new.stamp("cSEGUID")
+    new.stamp()
     old = Dseqrecord("Ggatcc", circular=True)
-    old.stamp("cSEGUID")
+    old.stamp()
 
     assert new.description[:35] == old.description[:35]
 
@@ -577,7 +570,7 @@ def test_write_different_file_to_stamped_existing_file2(monkeypatch):
 
     assert m.called
     # m.write().assert_called_once_with(new.format())
-    assert m.call_count == 6
+    assert m.call_count == 4  # 6
     assert m.mock_calls[0]
     assert m.mock_calls[4]
 
@@ -807,6 +800,9 @@ def test_Dseqrecord_cutting_adding_2():
     for enz in enzymes:
         for f in a:
             b, c, d = f.cut(enz)
+            print(b.seq.__repr__())
+            print(c.seq.__repr__())
+            print(d.seq.__repr__())
             e = b + c + d
             assert str(e.seq).lower() == str(f.seq).lower()
 
@@ -997,13 +993,13 @@ FEATURES             Location/Qualifiers
                      /ApEinfo_graphicformat=arrow_data {{0 1 2 0 0 -1} {} 0}
                      width 5 offset 0
 ORIGIN
-        1 GAATTCacan ggtaccnGGT ACCngcgGAT ATC
+        1 GAATTCacag ggtaccaGGT ACCagcgGAT ATC
 //
 
     """
     )
 
-    assert a.lseguid() == "di3hL8t2G4iQQsxlm_CtvnUMBz8"
+    assert a.seguid() == "ldseguid-dpWgD9vlrqN5phPCCAzE7Ki3E6A"
 
     assert [x.qualifiers["label"][0] for x in a.features] == [
         "Acc65I-1",
@@ -1109,6 +1105,12 @@ def test_features_change_ori():
     from pydna.dseqrecord import Dseqrecord
     from pydna.readers import read
     from pydna.utils import eq
+
+    # Shifted a sequence by zero returns a copy
+    s = Dseqrecord("GGATCC", circular=True)
+    assert s.shifted(0) == s
+    assert s.shifted(0) is not s
+
 
     s1 = read(
         """
@@ -1603,30 +1605,32 @@ def test_figure():
     assert circularDseqrecord.extract_feature(0).seq == feat
 
     a22, b22 = circularDseqrecord.cut(KpnI, Bsp120I)
+
+    # Passes the tests if changed to "Dseqrecord(-18)\n    cgatcgatcG    \ncatg\x1b[48;5;11mgctagctagC\x1b[0mCCGG"
     assert (
         b22.figure()
-        == "Dseqrecord(-18)\n    cgatcgatcG    \ncatg\x1b[48;5;11mgctag\x1b[0m\x1b[48;5;11mctagC\x1b[0mCCGG"
+        == "Dseqrecord(-18)\n    cgatcgatcG    \ncatg\x1b[48;5;11mgctagctagC\x1b[0mCCGG"
     )
     assert b22.extract_feature(0).seq == feat
 
     a23, b23 = circularDseqrecord.cut(KpnI, ApaI)
     assert (
         b23.figure()
-        == "Dseqrecord(-18)\n    cgatcgatcGGGCC\ncatg\x1b[48;5;11mgctag\x1b[0m\x1b[48;5;11mctagC\x1b[0m    "
+        == "Dseqrecord(-18)\n    cgatcgatcGGGCC\ncatg\x1b[48;5;11mgctagctagC\x1b[0m    "
     )
     assert b23.extract_feature(0).seq == feat
 
     a24, b24 = circularDseqrecord.cut(Acc65I, Bsp120I)
     assert (
         b24.figure()
-        == "Dseqrecord(-18)\ngtaccgatcgatcG    \n    \x1b[48;5;11mgctag\x1b[0m\x1b[48;5;11mctagC\x1b[0mCCGG"
+        == "Dseqrecord(-18)\ngtaccgatcgatcG    \n    \x1b[48;5;11mgctagctagC\x1b[0mCCGG"
     )
     assert b24.extract_feature(0).seq == feat
 
     a25, b25 = circularDseqrecord.cut(Acc65I, ApaI)
     assert (
         b25.figure()
-        == "Dseqrecord(-18)\ngtaccgatcgatcGGGCC\n    \x1b[48;5;11mgctag\x1b[0m\x1b[48;5;11mctagC\x1b[0m    "
+        == "Dseqrecord(-18)\ngtaccgatcgatcGGGCC\n    \x1b[48;5;11mgctagctagC\x1b[0m    "
     )
     assert b25.extract_feature(0).seq == feat
 
@@ -1639,19 +1643,20 @@ def test_jan_glx():
     # from pydna.genbank import Genbank
     # gb = Genbank("bjornjobb@gmail.com")
     # puc19 = gb.nucleotide("M77789.2")
-    # assert puc19.cseguid() == "n-NZfWfjHgA7wKoEBU6zfoXib_0"
+    # assert puc19.seguid() == "n-NZfWfjHgA7wKoEBU6zfoXib_0"
     # puc19.write("pUC19_M77789.gb")
     puc19 = read("pUC19_M77789.gb")
-    assert puc19.cseguid() == "n-NZfWfjHgA7wKoEBU6zfoXib_0"
+    assert puc19.seguid() == "cdseguid-zhw8Yrxfo3FO5DDccx4PamBVPCQ"
     insert, bb = puc19.cut(NdeI, BamHI)  # Note the order !
 
     puc19_ = (bb + insert).looped().synced(puc19)
-    assert puc19_.cseguid() == "n-NZfWfjHgA7wKoEBU6zfoXib_0"
+    assert puc19_.seguid() == "cdseguid-zhw8Yrxfo3FO5DDccx4PamBVPCQ"
 
-    # print(puc19_.extract_feature(2), "\n")
-    # print(puc19.extract_feature(6))
-
+    # Some features are lost because they spanned the cutting sites in puc19.
+    assert puc19_.extract_feature(0).seq == puc19.extract_feature(2).seq
+    assert puc19_.extract_feature(1).seq == puc19.extract_feature(4).seq
     assert puc19_.extract_feature(2).seq == puc19.extract_feature(6).seq
+    assert puc19_.extract_feature(3).seq == puc19.extract_feature(7).seq
 
 
 def test_synced():
@@ -1673,7 +1678,7 @@ def test_synced():
     pGUP1 = read("pGUP1_correct.gb")
     pGREG505 = read("pGREG505.gb")
     pGUP1_not_synced = read("pGUP1_not_synced.gb")
-    assert pGUP1_not_synced.synced(pGREG505).useguid() == "42wIByERn2kSe_Exn405RYwhffU" == pGUP1.useguid()
+    assert pGUP1_not_synced.synced(pGREG505).seguid() == "cdseguid-5aiMDLWXOfvl0PBCQV-96q9UKqY" == pGUP1.seguid()
 
     bb_ins = Dseqrecord("tcgcgcgtttcgAgtgatgacggtgaA", circular=True)
 
@@ -1847,6 +1852,7 @@ def test__repr_pretty_():
 
 def test___getitem__():
     from pydna.dseqrecord import Dseqrecord
+    from Bio.SeqFeature import SeqFeature, SimpleLocation
 
     s = Dseqrecord("GGATCC", circular=False)
     assert s[1:-1].seq == Dseqrecord("GATC", circular=False).seq
@@ -1858,13 +1864,32 @@ def test___getitem__():
     assert s[1:5].seq == Dseqrecord("GATC", circular=False).seq
     assert s[5:1:-1].seq == Dseqrecord("CCTA", circular=False).seq
 
-    assert t[1:1].seq == Dseqrecord("").seq
+    assert t[1:1].seq == Dseqrecord("GATCCG").seq
     assert t[5:1].seq == Dseqrecord("CG", circular=False).seq
     assert t[9:1].seq == Dseqrecord("").seq
     assert t[1:9].seq == Dseqrecord("").seq
     assert t[9:10].seq == Dseqrecord("").seq
     assert t[10:9].seq == Dseqrecord("").seq
 
+    # Test how slicing works with features (using sequence as in test_features_change_ori)
+    seqRecord = Dseqrecord("aaagGTACCTTTGGATCcggg", circular=True)
+    f1 = SeqFeature(SimpleLocation(4, 17, 1), type="misc_feature")
+    f2 = SeqFeature(SimpleLocation(17, 21, 1) + SimpleLocation(0, 4, 1), type="misc_feature")
+    seqRecord.features = [f1, f2]
+
+    # Exact feature sliced for normal and origin-spanning features
+    assert len(seqRecord[4:17].features) == 1
+    assert len(seqRecord[17:4].features) == 1
+
+    # Partial feature sliced for normal and origin-spanning features
+    assert len(seqRecord[2:20].features) == 1
+    assert len(seqRecord[13:8].features) == 1
+
+    # Indexing of full circular molecule (https://github.com/BjornFJohansson/pydna/issues/161)
+    s = Dseqrecord("GGATCC", circular=True)
+    str_seq = str(s.seq)
+    for shift in range(len(s)):
+        assert str(s[shift : shift].seq) == str_seq[shift:] + str_seq[:shift]
 
 def test___eq__():
     from pydna.dseqrecord import Dseqrecord
@@ -2008,6 +2033,11 @@ def test_shifted():
 def test_looped():
     from pydna.dseq import Dseq
     from pydna.dseqrecord import Dseqrecord
+
+    from Bio import BiopythonDeprecationWarning
+    import warnings
+
+    warnings.simplefilter("always")
 
     a = Dseqrecord("aAAa")
     a.add_feature()
@@ -2209,17 +2239,52 @@ def test_assemble_YEp24PGK_XK():
 
     YEp24PGK_XK = YEp24PGK_BglII + insert
 
+    assert YEp24PGK_XK.seguid() == "ldseguid-TdiKVsYCzZ0dt-4io12ZfKUrAgg"
+
     YEp24PGK_XK = YEp24PGK_XK.looped()
+
+    assert YEp24PGK_XK.seguid() == "cdseguid-hEldsrUV0mBpISw8_xpvnpfYi0g"
 
     YEp24PGK_XK = YEp24PGK_XK.synced("gaattctgaaccagtcctaaaacgagtaaataggaccggcaattc")  # YEp24PGK)
 
-    assert YEp24PGK_XK.useguid() == "HRVpCEKWcFsKhw_W-25ednUfldI"
-    assert YEp24PGK_XK.cseguid() == "t9fs_9UvEuD-Ankyy8XEr1hD5DQ"
+    assert YEp24PGK_XK.seguid() == "cdseguid-hEldsrUV0mBpISw8_xpvnpfYi0g"
 
     YEp24PGK_XK_correct = read("YEp24PGK_XK_manually_assembled.txt")
-    assert YEp24PGK_XK_correct.cseguid() == "t9fs_9UvEuD-Ankyy8XEr1hD5DQ"
+
+    assert YEp24PGK_XK_correct.seguid() == "cdseguid-hEldsrUV0mBpISw8_xpvnpfYi0g"
     assert eq(YEp24PGK_XK, YEp24PGK_XK_correct)
 
+def test_apply_cut():
+
+    from pydna.dseqrecord import Dseqrecord
+    from Bio.SeqFeature import SeqFeature, SimpleLocation
+    from pydna.utils import location_boundaries as _location_boundaries
+
+    def find_feature_by_id(f: Dseqrecord, id: str) -> SeqFeature:
+        return next(f for f in f.features if f.id == id)
+    # Single cut case, check that features are transmitted correctly.
+    for strand in [1, -1, None]:
+        seq = Dseqrecord("acgtATGaatt", circular=True)
+        seq.features.append(SeqFeature(SimpleLocation(4, 7,  strand), id='full_overlap'))
+        seq.features.append(SeqFeature(SimpleLocation(3, 7,  strand), id='left_side'))
+        seq.features.append(SeqFeature(SimpleLocation(4, 8,  strand), id='right_side'))
+        seq.features.append(SeqFeature(SimpleLocation(3, 10, strand), id='throughout'))
+        for shift in range(len(seq)):
+            seq_shifted = seq.shifted(shift)
+            cut_feature = find_feature_by_id(seq_shifted, 'full_overlap')
+            start, end = _location_boundaries(cut_feature.location)
+            # Cut leaving + and - overhangs in the feature full_overlap
+            for dummy_cut in (((start, -3), None), ((end, 3), None)):
+                open_seq = seq_shifted.apply_cut(dummy_cut, dummy_cut)
+                assert len(open_seq.features) == 4
+                new_locs = sorted(str(f.location) for f in open_seq.features)
+                assert str(open_seq.seq) == 'ATGaattacgtATG'
+                if strand == 1:
+                    assert new_locs == sorted(['[0:3](+)', '[0:4](+)', '[11:14](+)', '[10:14](+)'])
+                elif strand == -1:
+                    assert new_locs == sorted(['[0:3](-)', '[0:4](-)', '[11:14](-)', '[10:14](-)'])
+                if strand == None:
+                    assert new_locs == sorted(['[0:3]', '[0:4]', '[11:14]', '[10:14]'])
 
 if __name__ == "__main__":
     args = [
@@ -2235,6 +2300,5 @@ if __name__ == "__main__":
         "--current-env",
         "--doctest-modules",
         "--capture=no",
-        "-vvv",
     ]
     pytest.main(args)

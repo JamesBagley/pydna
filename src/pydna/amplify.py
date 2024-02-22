@@ -35,11 +35,12 @@ import logging as _logging
 
 _module_logger = _logging.getLogger("pydna." + __name__)
 
-_table = {  # IUPAC Ambiguity Codes for Nucleotide Degeneracy
+_table = {  # IUPAC Ambiguity Codes for Nucleotide Degeneracy and U for Uracile
     "A": "A",
     "C": "C",
     "G": "G",
     "T": "T",
+    "U": "A",  # XXX
     "R": "(A|G)",
     "Y": "(C|T)",
     "S": "(G|C)",
@@ -54,7 +55,7 @@ _table = {  # IUPAC Ambiguity Codes for Nucleotide Degeneracy
 }
 
 
-def _annealing_positions(primer, template, limit=15):
+def _annealing_positions(primer, template, limit):
     """Finds the annealing position(s) for a primer on a template where the
     primer anneals perfectly with at least limit nucleotides in the 3' part.
     The primer is the lower strand in the figure below.
@@ -196,7 +197,7 @@ class Anneal(object):  # ), metaclass=_Memoize):
         Dseqrecord
         circular: False
         size: 1011
-        ID: 1011bp_8SyDnG-azV61tx-z8PalCWZoVDo
+        ID: 1011bp
         Name: 1011bp_PCR_prod
         Description: pcr_product_p1_p2
         Number of features: 2
@@ -205,9 +206,9 @@ class Anneal(object):  # ), metaclass=_Memoize):
         taca..gcac
         atgt..cgtg
         >>> print(amplicon.program())
-        |95°C|95°C               |    |tmf:59.5
-        |____|_____          72°C|72°C|tmr:59.7
-        |3min|30s  \ 58.6°C _____|____|45s/kb
+        |95°C|95°C               |    |tmf:57.2
+        |____|_____          72°C|72°C|tmr:58.5
+        |3min|30s  \ 57.9°C _____|____|45s/kb
         |    |      \______/ 0:45|5min|GC 49%
         |    |       30s         |    |1011bp
         >>>
@@ -341,28 +342,26 @@ class Anneal(object):  # ), metaclass=_Memoize):
         for fp in self.forward_primers:
             for rp in self.reverse_primers:
                 if self.template.circular:
-                    tmpl = self.template.shifted(fp.position - fp._fp)
-                    tmpl = tmpl[:] * 2
-                    for f in tmpl.features:
-                        for x, y in zip(f.location.parts, f.location.parts[1:]):
-                            if x.end == y.start + len(self.template):
-                                f.location = _SimpleLocation(
-                                    x.start,
-                                    y.end + len(self.template),
-                                    strand=f.location.strand,
-                                )
-                    if fp.position > rp.position:
-                        tmpl = tmpl[: len(self.template) - fp.position + rp.position + rp._fp + fp._fp]
-                    else:
-                        tmpl = tmpl[: rp.position + rp._fp - (fp.position - fp._fp)]
-                elif fp.position <= rp.position:
-                    tmpl = self.template[fp.position - fp._fp : rp.position + rp._fp]
+                    shift = fp.position - fp._fp
+                    tpl = self.template.shifted(shift)  # shift template so that it starts where the fp starts anneling
+                    feats = tpl[: rp.position + rp._fp].features
+                    fp.position = fp._fp  # New position of fp becomes the footprint length
+                    rp.position = (rp.position - shift) % len(self.template)  # Shift the rp position as well
+                elif fp.position <= rp.position:  # pcr products only formed if fp anneals forward of rp
+                    feats = self.template[
+                        fp.position - fp._fp : rp.position + rp._fp
+                    ].features  # Save features covered by primers
+                    tpl = self.template
                 else:
                     continue
-                prd = _Dseqrecord(fp.tail) + tmpl + _Dseqrecord(rp.tail).reverse_complement()
-
-                full_tmpl_features = [f for f in tmpl.features if f.location.start == 0 and f.location.end == len(tmpl)]
-
+                if tpl.circular and fp.position == rp.position:
+                    prd = _Dseqrecord(fp) + _Dseqrecord(rp).reverse_complement()
+                else:
+                    prd = _Dseqrecord(fp) + tpl[fp.position : rp.position] + _Dseqrecord(rp).reverse_complement()
+                prd.features = feats
+                full_tmpl_features = [
+                    f for f in self.template.features if f.location.start == 0 and f.location.end == len(self.template)
+                ]
                 new_identifier = ""
                 if full_tmpl_features:
                     ft = full_tmpl_features[0]
@@ -378,13 +377,9 @@ class Anneal(object):  # ), metaclass=_Memoize):
                 prd.name = (
                     _identifier_from_string(new_identifier)[:16]
                     or self.kwargs.get("name")
-                    or "{}bp_PCR_prod".format(len(prd))[:16]
+                    or f"{len(prd)}bp_PCR_prod"[:16]
                 )
-                prd.id = (
-                    _identifier_from_string(new_identifier)[:16]
-                    or self.kwargs.get("id")
-                    or "{}bp_{}".format(str(len(prd))[:14], prd.useguid())
-                )
+                prd.id = _identifier_from_string(new_identifier)[:16] or self.kwargs.get("id") or f"{len(prd)}bp"[:16]
                 prd.description = self.kwargs.get("description") or "pcr_product_{}_{}".format(
                     fp.description, rp.description
                 )

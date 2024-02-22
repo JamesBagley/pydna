@@ -1,3 +1,5 @@
+.virtual_documents
+
 /prof/
 /tests/prof/
 
@@ -68,3 +70,6 @@ docs/_build/
 target/
 
 .eggs
+
+# mac files
+.DS_Store

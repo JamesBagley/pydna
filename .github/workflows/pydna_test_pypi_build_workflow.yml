@@ -2,11 +2,10 @@ name: Build for TESTPyPI
 on:
   release:
     types: [published]
-    branches:
-      - dev_bjorn
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event.release.target_commitish == 'testpypi'
     steps:
       - uses: actions/checkout@v3
       - name: Build and publish to pypi

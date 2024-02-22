@@ -5,6 +5,7 @@ from pydna import _PydnaWarning
 
 def test_add_feature():
     from pydna.seq import Seq
+    from Bio.Seq import Seq as BSeq
     from Bio.SeqRecord import SeqRecord as BSeqRecord
     from pydna.dseq import Dseq
     from pydna.dseqrecord import Dseqrecord
@@ -26,7 +27,7 @@ def test_add_feature():
     s.add_feature(seq=SeqRecord("GGATCC"))
     assert s.extract_feature(0).seq == SeqRecord("GGATCC").seq
     s = SeqRecord("tttGGATCCaaa")
-    s.add_feature(seq=BSeqRecord("GGATCC"))
+    s.add_feature(seq=BSeqRecord(BSeq("GGATCC")))
     assert s.extract_feature(0).seq == SeqRecord("GGATCC").seq
     s = SeqRecord("tttGGATCCaaa")
     s.add_feature(seq=Dseqrecord("GGATCC"))
@@ -73,26 +74,28 @@ def test_stamp():
     from Bio.SeqRecord import SeqRecord as bpSecRecord
 
     a = SeqRecord("attt")
-    assert a.stamp("useguid") == "ot6JPLeAeMmfztW1736Kc6DAqlo"
-    assert "pydna uSEGUID ot6JPLeAeMmfztW1736Kc6DAqlo" in a.annotations["comment"]
-    assert a.stamp("useguid")[:35] == "uSEGUID ot6JPLeAeMmfztW1736Kc6DAqlo"
+    assert a.stamp() == "lsseguid-ot6JPLeAeMmfztW1736Kc6DAqlo"
+    assert "pydna lsseguid-ot6JPLeAeMmfztW1736Kc6DAqlo" in a.annotations["comment"]
 
     a = SeqRecord("attt")
     a.annotations["comment"] = "something"
-    assert a.stamp("useguid") == "ot6JPLeAeMmfztW1736Kc6DAqlo"
+    assert a.stamp() == "lsseguid-ot6JPLeAeMmfztW1736Kc6DAqlo"
 
     assert "something" in a.annotations["comment"]
 
     a = SeqRecord("attt")
-    assert a.stamp("useguid") == "ot6JPLeAeMmfztW1736Kc6DAqlo"
+    assert a.stamp() == "lsseguid-ot6JPLeAeMmfztW1736Kc6DAqlo"
     a.seq = a.seq + "a"
 
     with pytest.warns(_PydnaWarning):
-        a.stamp("useguid")
+        a.stamp()
+
+    assert "pydna lsseguid-ot6JPLeAeMmfztW1736Kc6DAqlo" in a.annotations["comment"]
+    assert "pydna lsseguid-sFjwltMUzuIRRD_zch5hCn_8RV8" in a.annotations["comment"]
 
     a = SeqRecord(bpSeq("attt"))
     with pytest.raises(AttributeError):
-        a.stamp("useguid")
+        a.stamp()
 
 
 def test___hash__():

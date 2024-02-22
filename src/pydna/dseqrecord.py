@@ -15,11 +15,12 @@ from Bio.Restriction import RestrictionBatch as _RestrictionBatch
 from Bio.Restriction import CommOnly
 from pydna.dseq import Dseq as _Dseq
 from pydna._pretty import pretty_str as _pretty_str
-from pydna.utils import flatten as _flatten
+from pydna.utils import flatten as _flatten, location_boundaries as _location_boundaries
 
 # from pydna.utils import memorize as _memorize
 from pydna.utils import rc as _rc
 from pydna.utils import shift_location as _shift_location
+from pydna.utils import shift_feature as _shift_feature
 from pydna.common_sub_strings import common_sub_strings as _common_sub_strings
 from Bio.SeqFeature import SeqFeature as _SeqFeature
 from Bio import SeqIO
@@ -332,11 +333,7 @@ class Dseqrecord(_SeqRecord):
         []
         >>> a.add_feature(2,4)
         >>> a.features
-        [SeqFeature(SimpleLocation(ExactPosition(2),
-                                   ExactPosition(4),
-                                   strand=1),
-                    type='misc',
-                    qualifiers=...)]
+        [SeqFeature(SimpleLocation(ExactPosition(2), ExactPosition(4), strand=1), type='misc', qualifiers=...)]
         """
         if x and y and self.circular and x > y:
             pass
@@ -364,7 +361,7 @@ class Dseqrecord(_SeqRecord):
 
         self.features.append(sf)
 
-    def useguid(self):
+    def seguid(self):
         """Url safe SEGUID for the sequence.
 
         This checksum is the same as seguid but with base64.urlsafe
@@ -376,63 +373,11 @@ class Dseqrecord(_SeqRecord):
         --------
         >>> from pydna.dseqrecord import Dseqrecord
         >>> a = Dseqrecord("aa")
-        >>> a.useguid() # useguid is gBw0Jp907Tg_yX3jNgS4qQWttjU
-        'gBw0Jp907Tg_yX3jNgS4qQWttjU'
+        >>> a.seguid()
+        'ldseguid-5u_VqZ0yq_PnodWlwL970EWt6PY'
 
         """
-        return self.seq.useguid()
-
-    def cseguid(self):
-        """Url safe cSEGUID for a circular sequence.
-
-        Only defined for circular sequences.
-        The cSEGUID checksum uniquely identifies a circular
-        sequence regardless of where the origin is set.
-        The two Dseqrecord objects below are circular
-        permutations.
-
-        Examples
-        --------
-        >>> from pydna.dseqrecord import Dseqrecord
-        >>> a=Dseqrecord("agtatcgtacatg", circular=True)
-        >>> a.cseguid() # cseguid is CTJbs6Fat8kLQxHj+/SC0kGEiYs
-        'CTJbs6Fat8kLQxHj-_SC0kGEiYs'
-
-        >>> a=Dseqrecord("gagtatcgtacat", circular=True)
-        >>> a.cseguid()
-        'CTJbs6Fat8kLQxHj-_SC0kGEiYs'
-
-        """
-        if not self.circular:
-            raise TypeError("cseguid is only defined for circular sequences.")
-        return self.seq.cseguid()
-
-    def lseguid(self):
-        """Url safe lSEGUID for a linear sequence.
-
-        Only defined for linear double stranded sequences.
-
-        The lSEGUID checksum uniquely identifies a linear
-        sequence independent of its representation.
-        The two Dseqrecord objects below are each others
-        reverse complements, so they do in fact refer to
-        the same molecule.
-
-        Examples
-        --------
-        >>> from pydna.dseqrecord import Dseqrecord
-        >>> a=Dseqrecord("agtatcgtacatg")
-        >>> a.lseguid()
-        'DPshMN4KeAjMovEjGEV4Kzj18lU'
-
-        >>> b=Dseqrecord("catgtacgatact")
-        >>> a.lseguid()
-        'DPshMN4KeAjMovEjGEV4Kzj18lU'
-
-        """
-        if self.circular:
-            raise TypeError("lseguid is only defined for linear sequences.")
-        return self.seq.lseguid()
+        return self.seq.seguid()
 
     def looped(self):
         """
@@ -467,17 +412,17 @@ class Dseqrecord(_SeqRecord):
             elif five_prime[0] == "3'":
                 fn.location = fn.location + (-self.seq.ovhg)
             if fn.location.start < 0:
-                loc1 = _SimpleLocation(len(new) + fn.location.start, len(new), strand=fn.strand)
-                loc2 = _SimpleLocation(0, fn.location.end, strand=fn.strand)
+                loc1 = _SimpleLocation(len(new) + fn.location.start, len(new), strand=fn.location.strand)
+                loc2 = _SimpleLocation(0, fn.location.end, strand=fn.location.strand)
                 fn.location = _CompoundLocation([loc1, loc2])
 
             if fn.location.end > len(new):
-                loc1 = _SimpleLocation(fn.location.start, len(new), strand=fn.strand)
-                loc2 = _SimpleLocation(0, fn.location.end - len(new), strand=fn.strand)
+                loc1 = _SimpleLocation(fn.location.start, len(new), strand=fn.location.strand)
+                loc2 = _SimpleLocation(0, fn.location.end - len(new), strand=fn.location.strand)
                 fn.location = _CompoundLocation([loc1, loc2])
 
             fn.qualifiers = fo.qualifiers
-        # breakpoint()
+
         return new
 
     def tolinear(self):  # pragma: no cover
@@ -615,8 +560,6 @@ class Dseqrecord(_SeqRecord):
                 tstmp = int(_time.time() * 1_000_000)
                 old_filename = f"{name}_OLD_{tstmp}{ext}"
                 _os.rename(filename, old_filename)
-                newcseguid = self.cseguid() if self.circular else "na"
-                oldcseguid = old_file.cseguid() if old_file.circular else "na"
                 with open(filename, "w", encoding="utf8") as fp:
                     fp.write(self.format(f))
                 newmtime = _datetime.datetime.fromtimestamp(_os.path.getmtime(filename)).isoformat()
@@ -654,21 +597,16 @@ class Dseqrecord(_SeqRecord):
                     <td style="color:#32cb00;border: 1px solid;text-align:left;">{len(old_file)}</td>
                   </tr>
                   <tr style="color:#0000FF;border: 1px solid;text-align:left;">
-                    <td>uSEGUID</td>
-                    <td style="color:#fe0000;border: 1px solid;text-align:left;">{self.useguid()}</td>
-                    <td style="color:#32cb00;border: 1px solid;text-align:left;">{old_file.useguid()}</td>
-                  </tr>
-                  <tr style="color:#0000FF;border: 1px solid;text-align:left;">
-                    <td>cSEGUID</td>
-                    <td style="color:#fe0000;border: 1px solid;text-align:left;">{newcseguid}</td>
-                    <td style="color:#32cb00;border: 1px solid;text-align:left;">{oldcseguid}</td>
+                    <td>SEGUID</td>
+                    <td style="color:#fe0000;border: 1px solid;text-align:left;">{self.seguid()}</td>
+                    <td style="color:#32cb00;border: 1px solid;text-align:left;">{old_file.seguid()}</td>
                   </tr>
                 </tbody>
                 </table>
                 """
-            elif "SEGUID" in old_file.annotations.get("comment", ""):
-                pattern = r"(lSEGUID|cSEGUID|uSEGUID)_(\S{27})(_[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}){0,1}"
-                # cSEGUID_NNNNNNNNNNNNNNNNNNNNNNNNNNN_2020-10-10T11:11:11.111111
+            elif "seguid" in old_file.annotations.get("comment", ""):
+                pattern = r"(ldseguid|cdseguid)-(\S{27})(_[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}){0,1}"
+                # seguid-NNNNNNNNNNNNNNNNNNNNNNNNNNN_2020-10-10T11:11:11.111111
                 oldstamp = _re.search(pattern, old_file.description)
                 newstamp = _re.search(pattern, self.description)
                 newdescription = self.description
@@ -890,10 +828,22 @@ class Dseqrecord(_SeqRecord):
         sl_stop = sl.stop or len(self.seq)  # 1
 
         if not self.circular or sl_start < sl_stop:
+            # TODO: special case for sl_end == 0 in circular sequences
+            # related to https://github.com/BjornFJohansson/pydna/issues/161
+            if self.circular and sl.stop == 0:
+                sl = slice(sl.start, len(self.seq), sl.step)
             answer.features = super().__getitem__(sl).features
         elif self.circular and sl_start > sl_stop:
             answer.features = self.shifted(sl_start).features
-            answer.features = [f for f in answer.features if f.location.parts[-1].end <= answer.seq.length]
+            # origin-spanning features should only be included after shifting
+            # in cases where the slice comprises the entire sequence, but then
+            # sl_start == sl_stop and the second condition is not met
+            answer.features = [f for f in answer.features if (
+                               _location_boundaries(f.location)[1] <= answer.seq.length and
+                               _location_boundaries(f.location)[0] < _location_boundaries(f.location)[1])]
+        elif self.circular and sl_start == sl_stop:
+            cut = ((sl_start, 0), None)
+            return self.apply_cut(cut, cut)
         else:
             answer = Dseqrecord("")
         identifier = "part_{id}".format(id=self.id)
@@ -1188,7 +1138,7 @@ class Dseqrecord(_SeqRecord):
         if self.features:
             f = self.features[feature]
             locations = sorted(self.features[feature].location.parts, key=_SimpleLocation.start.fget)
-            strand = f.strand
+            strand = f.location.strand
         else:
             locations = [_SimpleLocation(0, 0, 1)]
             strand = 1
@@ -1271,7 +1221,7 @@ class Dseqrecord(_SeqRecord):
             raise TypeError("Sequence is linear, origin can only be " "shifted for circular sequences.\n")
         ln = len(self)
         if not shift % ln:
-            return self  # shift is a multiple of ln or 0
+            return _copy.deepcopy(self)  # shift is a multiple of ln or 0
         else:
             shift %= ln  # 0<=shift<=ln
         newseq = (self.seq[shift:] + self.seq[:shift]).looped()
@@ -1279,7 +1229,7 @@ class Dseqrecord(_SeqRecord):
         for feature in newfeatures:
             feature.location = _shift_location(feature.location, -shift, ln)
         newfeatures.sort(key=_operator.attrgetter("location.start"))
-        answer = _copy.copy(self)
+        answer = _copy.deepcopy(self)
         answer.features = newfeatures
         answer.seq = newseq
         return answer
@@ -1321,47 +1271,82 @@ class Dseqrecord(_SeqRecord):
 
 
         """
-        from pydna.utils import shift_location
 
-        features = _copy.deepcopy(self.features)
+        cutsites = self.seq.get_cutsites(*enzymes)
+        cutsite_pairs = self.seq.get_cutsite_pairs(cutsites)
+        return tuple(self.apply_cut(*cs) for cs in cutsite_pairs)
 
-        if self.circular:
-            try:
-                x, y, oh = self.seq._firstcut(*enzymes)
-            except ValueError:
-                return ()
-            dsr = _Dseq(
-                self.seq.watson[x:] + self.seq.watson[:x],
-                self.seq.crick[y:] + self.seq.crick[:y],
-                oh,
-            )
-            newstart = min(x, (self.seq.length - y))
-            for f in features:
-                f.location = shift_location(f.location, -newstart, self.seq.length)
-                f.location, *rest = f.location.parts
-                for part in rest:
-                    if 0 in part:
-                        f.location._end = part.end + self.seq.length
-                    else:
-                        f.location += part
-            frags = dsr.cut(enzymes) or [dsr]
+    def apply_cut(self, left_cut, right_cut):
+        dseq = self.seq.apply_cut(left_cut, right_cut)
+        # TODO: maybe remove depending on https://github.com/BjornFJohansson/pydna/issues/161
+
+        if left_cut == right_cut:
+            # Not really a cut, but to handle the general case
+            if left_cut is None:
+                features = _copy.deepcopy(self.features)
+            else:
+                # The features that span the origin if shifting with left_cut, but that do not cross
+                # the cut site should be included, and if there is a feature within the cut site, it should
+                # be duplicated. See https://github.com/BjornFJohansson/pydna/issues/180 for a practical example.
+                #
+                # Let's say we are going to open a circular plasmid like below (| inidicate cuts, numbers indicate
+                # features)
+                #
+                #    3333|3
+                #    1111
+                #     000
+                # XXXXatg|YYY
+                # XXX|tacYYYY
+                #     000
+                #     2222
+                #
+                left_watson, left_crick, left_ovhg = self.seq.get_cut_parameters(left_cut, True)
+                initial_shift = left_watson if left_ovhg < 0 else left_crick
+                features = self.shifted(initial_shift).features
+                # for f in features:
+                #     print(f.id, f.location, _location_boundaries(f.location))
+                # Here, we have done what's shown below (* indicates the origin).
+                # The features 0 and 2 have the right location for the final product:
+                #
+                #    3*3333
+                #    1*111
+                # XXXX*atgYYY
+                # XXXX*tacYYY
+                #      000
+                #      2222
+
+                features_need_transfer = [f for f in features if (_location_boundaries(f.location)[1] <= abs(left_ovhg))]
+                features_need_transfer = [_shift_feature(f, -abs(left_ovhg), len(self)) for f in features_need_transfer]
+                #                                           ^                ^^^^^^^^^
+                # Now we have shifted the features that end before the cut (0 and 1, but not 3), as if
+                # they referred to the below sequence (* indicates the origin):
+                #
+                #    1111
+                #     000
+                # XXXXatg*YYY
+                # XXXXtac*YYY
+                #
+                # The features 0 and 1 would have the right location if the final sequence had the same length
+                # as the original one. However, the final product is longer because of the overhang.
+
+                features += [_shift_feature(f, abs(left_ovhg), len(dseq)) for f in features_need_transfer]
+                #                             ^                ^^^^^^^^^
+                # So we shift back by the same amount in the opposite direction, but this time we pass the 
+                # length of the final product.
+                # print(*features, sep='\n')
+                # Features like 3 are removed here
+                features = [f for f in features if (
+                               _location_boundaries(f.location)[1] <= len(dseq) and
+                               _location_boundaries(f.location)[0] <= _location_boundaries(f.location)[1])]
         else:
-            frags = self.seq.cut(enzymes)
-            if not frags:
-                return ()
-        dsfs = []
-        for fr in frags:
-            dsf = Dseqrecord(fr, n=self.n)
-            start = fr.pos
-            end = fr.pos + fr.length
-            dsf.features = [
-                _copy.deepcopy(fe) for fe in features if start <= fe.location.start and end >= fe.location.end
-            ]
-            for feature in dsf.features:
-                feature.location += -start
-            dsfs.append(dsf)
-        return tuple(dsfs)
+            left_watson, left_crick, left_ovhg = self.seq.get_cut_parameters(left_cut, True)
+            right_watson, right_crick, right_ovhg = self.seq.get_cut_parameters(right_cut, False)
 
+            left_edge = left_crick if left_ovhg > 0 else left_watson
+            right_edge = right_watson if right_ovhg > 0 else right_crick
+            features = self[left_edge:right_edge].features
+
+        return Dseqrecord(dseq, features=features)
 
 if __name__ == "__main__":
     cache = _os.getenv("pydna_cache")

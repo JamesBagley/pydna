@@ -6,7 +6,7 @@ import pytest
 monkeypatch = pytest.MonkeyPatch()
 
 
-def test_PrimerList_init(monkeypatch):
+def test_PrimerList_init(monkeypatch, capsys):
     monkeypatch.setenv("pydna_primers", "primers_linux_line_endings.txt")
 
     from pydna.parsers import parse_primers
@@ -23,11 +23,18 @@ def test_PrimerList_init(monkeypatch):
 
     assert pl1 == primer_source
 
+    assert len(pl1) == 4
+
+    from pydna.parsers import parse_primers
+    from pydna import myprimers
+
+    primer_source = parse_primers("primers_linux_line_endings.txt")[::-1]
+
     pl2 = myprimers.PrimerList(primer_source)
 
     pl3 = myprimers.PrimerList(path="primers_linux_line_endings.txt")
 
-    assert len(pl1) == len(pl2) == len(pl3) == 4
+    assert len(pl2) == len(pl3) == 4
 
     assert pl1 == pl2 == pl3
 
@@ -40,7 +47,7 @@ def test_PrimerList_init(monkeypatch):
                             """
     )
 
-    np = pl1.assign_numbers(newlist)
+    np = pl2.assign_numbers(newlist)
 
     assert [s.name for s in parse_primers(np)] == ["5_abc", "4_efg"]
 
@@ -53,12 +60,14 @@ def test_PrimerList_init(monkeypatch):
                             """
     )
 
-    np = pl1.assign_numbers(newlist)
+    np = pl2.assign_numbers(newlist)
 
     assert [s.name for s in parse_primers(np)] == ["4_abc", "0_primer"]
 
     with pytest.raises(ValueError):
-        pl1.pydna_code_from_list(newlist)
+        pl2.pydna_code_from_list(newlist)
+    captured = capsys.readouterr()
+    assert captured.out == ">abc 3-mer\naaa\n\n"
 
     import textwrap
 
@@ -70,16 +79,16 @@ def test_PrimerList_init(monkeypatch):
 
     p[0], p[1], p[2], p[3] = parse_primers('''
 
-    >0_primer
+    >0_primer 8-mer
     tttttttt
 
-    >1_primer
+    >1_primer 8-mer
     gggggggg
 
-    >2_primer
+    >2_primer 8-mer
     cccccccc
 
-    >3_primer
+    >3_primer 8-mer
     aaaaaaaa
 
     ''')"""
@@ -145,4 +154,4 @@ def test_find_duplicate_primers(monkeypatch):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+    pytest.main([__file__, "-vvv", "-s"])
