@@ -27,14 +27,13 @@ def interpolator(mwstd):
     return interpolator
 
 
-def gel(samples=None, gel_length=600, margin=50, interpolator=interpolator(mwstd=_mwstd)):
+def gel(samples=None, gel_length=600, margin=50, interpolator=interpolator(mwstd=_mwstd), lane_width=50):
     import numpy as np
     from PIL import Image as Image
     from PIL import ImageDraw as ImageDraw
 
     """docstring."""
     max_intensity = 256
-    lane_width = 50
     lanesep = 10
     start = 10
     samples = samples or [interpolator.mwstd]
